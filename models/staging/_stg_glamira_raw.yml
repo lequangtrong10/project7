@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: stg_glamira_raw
+    description: >
+      Staging model for checkout_success events from raw.glamira_raw.
+      Expands cart_products into one row per cart item, normalizes order_id,
+      parses product prices into numeric values, and resolves transaction
+      currency into a standardized ISO currency code.
+
+    columns:
+
+      - name: _id
+        description: "Source checkout event identifier."
+        tests:
+          - not_null
+
+      - name: order_id
+        description: "Normalized order identifier with trailing .0 removed."
+        tests:
+          - not_null
+
+      - name: order_timestamp
+        description: "Checkout event timestamp converted from Unix seconds."
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Product identifier extracted from cart_products."
+        tests:
+          - not_null
+
+      - name: cart_index
+        description: "Zero-based position of the product within cart_products."
+        tests:
+          - not_null
+
+      - name: currency_code
+        description: >
+          Standardized ISO currency code resolved from the product currency,
+          URL mapping, or source currency.
+
+      - name: order_qty
+        description: >
+          Product quantity extracted from cart_products. NULL is preserved
+          when the source amount is missing or invalid.
+
+      - name: unit_price
+        description: >
+          Parsed numeric product price. NULL is preserved when the source
+          product price is missing or cannot be safely parsed.
+
+      - name: product_price
+        description: "Original product price value from the source cart item."
+
+      - name: product_currency
+        description: >
+          Currency representation resolved from the raw product currency,
+          URL mapping, or source-level currency before ISO normalization.
+
+      - name: store_id
+        description: "Store identifier associated with the checkout event."
+
+      - name: user_id_db
+        description: "Source customer identifier."
+
+      - name: email_address
+        description: "Customer email address from the source event."
+
+      - name: currency
+        description: "Original source-level currency value."
+
+      - name: ip
+        description: "IP address associated with the checkout event."
+
+      - name: current_url
+        description: "URL associated with the checkout event."
+
+      - name: device_id
+        description: "Source device identifier."
+
+      - name: user_agent
+        description: "Browser user-agent string from the source event."
+
+      - name: resolution
+        description: "Screen resolution reported by the source event."
+
+      - name: raw_product_currency
+        description: "Original product currency value before currency mapping."
+
+      - name: raw_price
+        description: "Original raw event-level price from the source."

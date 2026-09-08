@@ -1,0 +1,384 @@
+models:
+
+  # ============================================================
+  # DIMENSION: PRODUCT
+  # ============================================================
+  - name: dim_product
+    description: "Product dimension containing one unique record per product."
+
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "product_key = -1 OR min_price <= max_price"
+
+    columns:
+      - name: product_key
+        description: "Surrogate key generated from product_id."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: product_id
+        description: "Natural key identifying the product."
+        data_tests:
+          - not_null
+          - unique
+
+
+  # ============================================================
+  # DIMENSION: CURRENCY
+  # ============================================================
+  - name: dim_currency
+    description: "Currency dimension containing one record per currency code."
+
+    columns:
+      - name: currency_key
+        description: "Surrogate key generated from currency_code."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: currency_code
+        description: "ISO 4217 currency code."
+        data_tests:
+          - not_null
+          - unique
+          - dbt_expectations.expect_column_value_lengths_to_equal:
+              arguments:
+                value: 3
+
+      - name: currency_name
+        description: "Human-readable currency name."
+        data_tests:
+          - not_null
+
+
+  # ============================================================
+  # FACT: SALES ORDER DETAIL
+  # ============================================================
+  - name: fact_sales_order_detail
+    description: >
+      Fact table with 1 row per cart_products item in a checkout_success event.
+      Grain key = FARM_FINGERPRINT(_id + cart_index).
+      78 rows have sales_usd_price NULL for two confirmed reasons:
+      77 rows belong to 7 currencies without exchange rates
+      (ARS, BOB, CRC, DOP, GTQ, PYG, VND), and 1 JPY row
+      (product_id 108669) has NULL unit_price in the source.
+
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: >
+              sales_amount IS NULL
+              OR sales_amount = order_qty * unit_price
+
+    columns:
+
+      - name: fact_pk
+        description: "Surrogate key generated from _id and cart_index."
+        tests:
+          - unique
+          - not_null
+
+      - name: order_id
+        description: "Order identifier."
+        tests:
+          - not_null
+
+      - name: customer_key
+        description: >
+          Foreign key to dim_customer. -1 represents Unknown Member
+          when the source user_id_db cannot be matched to a customer dimension record.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+
+      - name: date_key
+        description: "Foreign key to dim_date."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: product_key
+        description: >
+          Foreign key to dim_product. -1 represents Unknown Member
+          for product IDs that do not exist in the product dimension.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_key
+
+      - name: store_key
+        description: "Foreign key to dim_store."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_store')
+                field: store_key
+
+      - name: currency_key
+        description: "Foreign key to dim_currency."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_currency')
+                field: currency_key
+
+      - name: location_key
+        description: >
+          Foreign key to dim_location. -1 represents Unknown Member
+          when the IP address could not be mapped to a resolved geography.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_location')
+                field: location_key
+
+      - name: ip
+        description: "Raw IP address associated with the order. Contains PII."
+        policy_tags:
+          - 'projects/project-cb877e31-7fb6-4cca-856/locations/asia-southeast1/taxonomies/1200166080218566966/policyTags/6523348285393393515'
+
+      - name: order_qty
+        description: "Order quantity as provided by the source."
+
+      - name: unit_price
+        description: >
+          Unit price from the source. NULL is preserved when the source value
+          is missing; it is not coerced to zero.
+
+      - name: sales_amount
+        description: >
+          Sales amount calculated as order_qty * unit_price.
+
+      - name: rate_to_usd
+        description: >
+          Exchange rate used to convert the transaction currency to USD.
+          NULL for currencies without an available exchange rate.
+
+      - name: unit_price_usd
+        description: >
+          Unit price converted to USD using rate_to_usd.
+          NULL when unit_price or rate_to_usd is NULL.
+
+      - name: sales_usd_price
+        description: >
+          Sales amount converted to USD using rate_to_usd.
+          NULL when the exchange rate is unavailable or the source unit_price
+          is NULL.
+
+
+  # ============================================================
+  # FACT: EXCHANGE RATE
+  # ============================================================
+  - name: fact_exchange_rate
+    description: "Exchange rate fact containing currency conversion rates."
+
+    columns:
+      - name: exchange_rate_key
+        description: "Surrogate key identifying an exchange rate record."
+        tests:
+          - not_null
+          - unique
+
+      - name: currency_key
+        description: "Foreign key to dim_currency."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_currency')
+                field: currency_key
+
+      - name: rate_to_usd
+        description: >
+          Exchange rate from the transaction currency to USD.
+          Must be positive when a rate is available.
+        tests:
+          - not_null
+
+
+  # ============================================================
+  # DIMENSION: STORE
+  # ============================================================
+  - name: dim_store
+    description: >
+      Store dimension containing one record per store.
+
+    columns:
+      - name: store_key
+        description: "Surrogate key identifying a store."
+        tests:
+          - not_null
+          - unique
+
+      - name: store_id
+        description: "Business key identifying the store."
+        tests:
+          - not_null
+          - unique
+
+
+  # ============================================================
+  # DIMENSION: LOCATION
+  # ============================================================
+  - name: dim_location
+    description: >
+      Location dimension at geography grain.
+      Each record represents one unique combination of country,
+      region, and city. The Unknown Member represents IP addresses
+      whose geographic location could not be resolved.
+
+    config:
+      contract:
+        enforced: true
+
+    tests:
+      - dbt_expectations.expect_compound_columns_to_be_unique:
+          arguments:
+            column_list:
+              - country_name
+              - region_name
+              - city_name
+
+    columns:
+      - name: location_key
+        data_type: INT64
+        description: >
+          Surrogate key identifying a unique geographic location.
+          -1 represents the Unknown Member.
+        tests:
+          - not_null
+          - unique
+
+      - name: country_code
+        data_type: STRING
+        description: "Country code of the geographic location."
+
+      - name: country_name
+        data_type: STRING
+        description: "Country name of the geographic location."
+
+      - name: region_name
+        data_type: STRING
+        description: "Region or state name of the geographic location."
+
+      - name: city_name
+        data_type: STRING
+        description: "City name of the geographic location."
+
+      - name: inserted_date
+        data_type: TIMESTAMP
+        description: "Timestamp when the record was inserted by dbt."
+
+      - name: inserted_by
+        data_type: STRING
+        description: "Process or tool that inserted the record."
+
+      - name: updated_date
+        data_type: TIMESTAMP
+        description: "Timestamp when the record was last updated by dbt."
+
+      - name: updated_by
+        data_type: STRING
+        description: "Process or tool that last updated the record."
+
+
+  # ============================================================
+  # DIMENSION: DATE
+  # ============================================================
+  - name: dim_date
+    description: >
+      Date dimension containing one record per calendar date.
+
+    columns:
+      - name: date_key
+        description: "Surrogate key identifying a calendar date."
+        tests:
+          - not_null
+          - unique
+
+      - name: month_number
+        description: "Month number from 1 to 12."
+
+      - name: quarter_number
+        description: "Quarter number from 1 to 4."
+
+      - name: day_of_week
+        description: "Day of week using BigQuery numbering from 1 to 7."
+
+
+  # ============================================================
+  # DIMENSION: CUSTOMER
+  # ============================================================
+  - name: dim_customer
+    description: >
+      Customer dimension implementing SCD Type 2.
+      Each customer may have multiple historical versions,
+      with exactly one current version.
+
+    tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: >
+              end_date IS NULL
+              OR end_date > start_date
+
+    columns:
+      - name: customer_key
+        description: "Surrogate key for the customer dimension."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Business key identifying the customer."
+        tests:
+          - not_null
+
+      - name: email_address
+        description: "Customer email address. Contains PII."
+        policy_tags:
+          - 'projects/project-cb877e31-7fb6-4cca-856/locations/asia-southeast1/taxonomies/1200166080218566966/policyTags/703630202717335588'
+
+
+  # ============================================================
+  # MAPPING: IP → LOCATION
+  # ============================================================
+  - name: map_ip_location
+    description: >
+      Mapping table between raw IP addresses and location_key.
+      Each IP is mapped to one geographic location.
+      IP addresses whose geographic lookup failed are mapped
+      to the Unknown Member (-1).
+
+    columns:
+      - name: ip
+        description: "Raw IP address used for geographic mapping. Contains PII."
+        policy_tags:
+          - 'projects/project-cb877e31-7fb6-4cca-856/locations/asia-southeast1/taxonomies/1200166080218566966/policyTags/6523348285393393515'
+        tests:
+          - not_null
+          - unique
+
+      - name: location_key
+        description: >
+          Foreign key to dim_location. -1 represents the Unknown Member
+          when the IP address could not be mapped to a resolved geography.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_location')
+                field: location_key

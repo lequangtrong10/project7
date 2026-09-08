@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: stg_products
+    description: >
+      Staging model for raw product data used as the source
+      for the product dimension.
+
+    columns:
+      - name: product_id
+        description: "Product identifier from the source product data."
+        tests:
+          - not_null

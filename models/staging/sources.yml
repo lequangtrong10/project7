@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: glamira_raw
+      - name: products
+      - name: ip_locations

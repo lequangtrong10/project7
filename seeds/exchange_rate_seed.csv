@@ -1,0 +1,35 @@
+﻿currency_code,rate_to_usd,rate_date,source
+USD,1,3/31/2020,IMF Representative Exchange Rates
+EUR,1.0956,3/31/2020,IMF Representative Exchange Rates
+GBP,1.23605,3/31/2020,IMF Representative Exchange Rates
+AUD,0.6175,3/31/2020,IMF Representative Exchange Rates
+NZD,0.5997,3/31/2020,IMF Representative Exchange Rates
+CHF,1.035851,3/31/2020,IMF Representative Exchange Rates
+SEK,0.099235,3/31/2020,IMF Representative Exchange Rates
+DKK,0.146715,3/31/2020,IMF Representative Exchange Rates
+CAD,0.704862,3/31/2020,IMF Representative Exchange Rates
+CZK,0.040091,3/31/2020,IMF Representative Exchange Rates
+PLN,0.241162,3/31/2020,IMF Representative Exchange Rates
+NOK,0.095187,3/31/2020,IMF Representative Exchange Rates
+MXN,0.042581,3/31/2020,IMF Representative Exchange Rates
+SGD,0.701887,3/31/2020,IMF Representative Exchange Rates
+CLP,0.001182,3/31/2020,IMF Representative Exchange Rates
+ZAR,0.055893,3/31/2020,IMF Representative Exchange Rates
+COP,0.000246,3/31/2020,IMF Representative Exchange Rates
+PHP,0.019591,3/31/2020,IMF Representative Exchange Rates
+PEN,0.291282,3/31/2020,IMF Representative Exchange Rates
+INR,0.013265,3/31/2020,IMF Representative Exchange Rates
+JPY,0.0092,3/31/2020,IMF Representative Exchange Rates
+CNY,0.141386,3/31/2020,IMF Representative Exchange Rates
+UYU,0.023252,3/31/2020,IMF Representative Exchange Rates
+BRL,0.192376,3/31/2020,IMF Representative Exchange Rates
+AED,0.272257,3/31/2020,IMF Representative Exchange Rates (pegged)
+BGN,0.560243,3/31/2020,ECB peg to EUR (derived)
+KWD,3.241426,3/31/2020,IMF Representative Exchange Rates
+RON,0.226596,4/1/2020,BNR Romania official archive
+HUF,0.002993,4/1/2020,BNR Romania official archive (cross-derived)
+TRY,0.150307,4/1/2020,BNR Romania official archive (cross-derived)
+HRK,0.143301,4/1/2020,BNR Romania official archive (cross-derived)
+RSD,0.009313,4/1/2020,BNR Romania official archive (cross-derived)
+MDL,0.054777,4/1/2020,BNR Romania official archive (cross-derived)
+HKD,0.128999,2020-05,"Federal Reserve G.5 (monthly average, different date basis)"
