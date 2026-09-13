@@ -2,7 +2,13 @@
     materialized='incremental',
     incremental_strategy='merge',
     unique_key='fact_pk',
-    on_schema_change='sync_all_columns'
+    on_schema_change='sync_all_columns',
+    partition_by={
+        'field': 'order_timestamp',
+        'data_type': 'timestamp',
+        'granularity': 'day'
+    },
+    cluster_by=['currency_key', 'product_key']
 ) }}
 
 WITH source_data AS (

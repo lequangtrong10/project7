@@ -4,7 +4,10 @@ models:
   # DIMENSION: PRODUCT
   # ============================================================
   - name: dim_product
-    description: "Product dimension containing one unique record per product."
+    description: 
+      Product dimension containing one unique record per product.
+      Includes product attributes, pricing information, and product classification.
+      The Unknown Member uses product_key = -1 for unmatched products.
 
     tests:
       - dbt_utils.expression_is_true:
@@ -58,17 +61,32 @@ models:
   # ============================================================
   - name: fact_sales_order_detail
     description: >
-      Fact table with 1 row per cart_products item in a checkout_success event.
-      Grain key = FARM_FINGERPRINT(_id + cart_index).
+      Fact table at order-product grain. Each record represents one unique
+      combination of order_id and product_id, with duplicate source records
+      aggregated (SUM for order_qty and sales_amount, AVG for unit_price).
+      fact_pk is generated from product_id and order_id.
+
+      Partitioned by DATE(order_timestamp) and clustered by
+      (currency_key, product_key) to support future scale. The current table
+      contains 34,776 rows, so partitioning does not produce a measurable
+      reduction in query bytes on the current dataset.
+
       78 rows have sales_usd_price NULL for two confirmed reasons:
       77 rows belong to 7 currencies without exchange rates
       (ARS, BOB, CRC, DOP, GTQ, PYG, VND), and 1 JPY row
       (product_id 108669) has NULL unit_price in the source.
 
+      Unknown Member usage: customer_key = -1 for 11,643 rows
+      (checkout events missing user_id_db); product_key = -1 for 6,985 rows
+      (product_id not found in raw.products). No fact rows have
+      location_key = -1. However, 14 fact rows resolve to location records
+      with NULL or empty geography in dim_location, representing unresolved
+      location information retained with a valid location_key.
+
     columns:
 
       - name: fact_pk
-        description: "Surrogate key generated from _id and cart_index."
+        description: "Surrogate key generated from product_id and order_id."
         tests:
           - unique
           - not_null
@@ -320,13 +338,12 @@ models:
       Customer dimension implementing SCD Type 2.
       Each customer may have multiple historical versions,
       with exactly one current version.
+      Current records use 9999-12-31 as the end-date sentinel.
 
     tests:
       - dbt_utils.expression_is_true:
           arguments:
-            expression: >
-              end_date IS NULL
-              OR end_date > start_date
+            expression: "end_date > start_date"
 
     columns:
       - name: customer_key
@@ -364,3 +381,64 @@ models:
         description: "Domain host extracted from current_url."
         tests:
           - not_null
+
+# ============================================================
+# MART: SALES REPORT
+# ============================================================
+  - name: mart_sales_report
+    description: >
+      Sales reporting mart combining sales facts with date, product,
+      location, store, and currency dimensions.
+      Designed for analytical reporting and dashboard consumption.
+
+    columns:
+      - name: fact_pk
+        description: "Unique surrogate key for the order-product fact record."
+
+      - name: order_id
+        description: "Order identifier."
+
+      - name: order_timestamp
+        description: "Timestamp when the order event occurred."
+
+      - name: product_id
+        description: "Natural key identifying the product."
+
+      - name: product_name
+        description: "Product name."
+
+      - name: category_name
+        description: "Product category."
+
+      - name: gender
+        description: "Product gender classification."
+
+      - name: country_name
+        description: "Country associated with the order location."
+
+      - name: city_name
+        description: "City associated with the order location."
+
+      - name: store_id
+        description: "Business identifier of the store."
+
+      - name: currency_code
+        description: "ISO 4217 currency code of the transaction."
+
+      - name: currency_name
+        description: "Human-readable currency name."
+
+      - name: order_qty
+        description: "Aggregated quantity ordered for the order-product grain."
+
+      - name: unit_price
+        description: "Average unit price for the order-product grain."
+
+      - name: sales_amount
+        description: "Aggregated sales amount in the original transaction currency."
+
+      - name: rate_to_usd
+        description: "Exchange rate used to convert the transaction currency to USD."
+
+      - name: sales_usd_price
+        description: "Sales amount converted to USD using the applicable exchange rate."
