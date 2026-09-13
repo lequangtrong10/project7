@@ -10,11 +10,6 @@ models:
 
     columns:
 
-      - name: _id
-        description: "Source checkout event identifier."
-        tests:
-          - not_null
-
       - name: order_id
         description: "Normalized order identifier with trailing .0 removed."
         tests:

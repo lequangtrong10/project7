@@ -22,7 +22,7 @@ currency_dimension AS (
             WHEN 'ARS' THEN 'Argentine Peso' WHEN 'CNY' THEN 'Chinese Yuan' WHEN 'INR' THEN 'Indian Rupee'
             WHEN 'JPY' THEN 'Japanese Yen' WHEN 'PHP' THEN 'Philippine Peso' WHEN 'PYG' THEN 'Paraguayan Guarani'
             WHEN 'RSD' THEN 'Serbian Dinar' WHEN 'TRY' THEN 'Turkish Lira'
-            ELSE NULL
+            ELSE 'Undefined'
         END AS currency_name
     FROM deduplicated
 )

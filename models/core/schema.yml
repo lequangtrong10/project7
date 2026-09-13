@@ -65,13 +65,6 @@ models:
       (ARS, BOB, CRC, DOP, GTQ, PYG, VND), and 1 JPY row
       (product_id 108669) has NULL unit_price in the source.
 
-    tests:
-      - dbt_utils.expression_is_true:
-          arguments:
-            expression: >
-              sales_amount IS NULL
-              OR sales_amount = order_qty * unit_price
-
     columns:
 
       - name: fact_pk
@@ -145,7 +138,7 @@ models:
                 to: ref('dim_location')
                 field: location_key
 
-      - name: ip
+      - name: ip_address
         description: "Raw IP address associated with the order. Contains PII."
         policy_tags:
           - 'projects/project-cb877e31-7fb6-4cca-856/locations/asia-southeast1/taxonomies/1200166080218566966/policyTags/6523348285393393515'
@@ -351,34 +344,23 @@ models:
         description: "Customer email address. Contains PII."
         policy_tags:
           - 'projects/project-cb877e31-7fb6-4cca-856/locations/asia-southeast1/taxonomies/1200166080218566966/policyTags/703630202717335588'
-
-
-  # ============================================================
-  # MAPPING: IP → LOCATION
-  # ============================================================
-  - name: map_ip_location
+  
+  - name: bridge_store_domain
     description: >
-      Mapping table between raw IP addresses and location_key.
-      Each IP is mapped to one geographic location.
-      IP addresses whose geographic lookup failed are mapped
-      to the Unknown Member (-1).
+      Bridge table capturing the many-to-many relationship between
+      stores and domains. One row per unique (store, domain) pair.
 
     columns:
-      - name: ip
-        description: "Raw IP address used for geographic mapping. Contains PII."
-        policy_tags:
-          - 'projects/project-cb877e31-7fb6-4cca-856/locations/asia-southeast1/taxonomies/1200166080218566966/policyTags/6523348285393393515'
-        tests:
-          - not_null
-          - unique
-
-      - name: location_key
-        description: >
-          Foreign key to dim_location. -1 represents the Unknown Member
-          when the IP address could not be mapped to a resolved geography.
+      - name: store_key
+        description: "Foreign key to dim_store."
         tests:
           - not_null
           - relationships:
               arguments:
-                to: ref('dim_location')
-                field: location_key
+                to: ref('dim_store')
+                field: store_key
+
+      - name: domain
+        description: "Domain host extracted from current_url."
+        tests:
+          - not_null

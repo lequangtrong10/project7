@@ -35,7 +35,9 @@ customer_dimension AS (
     SELECT
         FARM_FINGERPRINT(CONCAT(CAST(customer_id AS STRING), '|', CAST(start_date AS STRING))) AS customer_key,
         CAST(customer_id AS STRING) AS customer_id,
-        email_address, start_date, end_date,
+        email_address,
+        start_date,
+        COALESCE(end_date, TIMESTAMP('9999-12-31 00:00:00 UTC')) AS end_date,
         end_date IS NULL AS is_current
     FROM version_windowed
     UNION ALL
@@ -44,7 +46,7 @@ customer_dimension AS (
         'UNKNOWN' AS customer_id,
         'UNKNOWN' AS email_address,
         TIMESTAMP('1900-01-01 00:00:00 UTC') AS start_date,
-        NULL AS end_date,
+        TIMESTAMP('9999-12-31 00:00:00 UTC') AS end_date,
         TRUE AS is_current
 )
 SELECT

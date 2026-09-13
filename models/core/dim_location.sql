@@ -1,15 +1,10 @@
-WITH geography_data AS (
-    SELECT DISTINCT
-        country_code,
-        country_name,
-        region_name,
-        city_name
-    FROM {{ source('raw', 'ip_locations') }}
-    WHERE lookup_status = 'ok'
+WITH dim_location_source AS (
+    SELECT *
+    FROM {{ ref('stg_dim_location') }}
 ),
 
-location_dimension AS (
-    SELECT
+dim_location_distinct AS (
+    SELECT DISTINCT
         FARM_FINGERPRINT(
             CONCAT(
                 COALESCE(country_code, ''), '|',
@@ -21,22 +16,26 @@ location_dimension AS (
         country_name,
         region_name,
         city_name
-    FROM geography_data
+    FROM dim_location_source
 ),
 
-unknown_member AS (
+dim_locaton_unknown_member AS (
     SELECT
         CAST(-1 AS INT64) AS location_key,
-        CAST(NULL AS STRING) AS country_code,
-        CAST(NULL AS STRING) AS country_name,
-        CAST(NULL AS STRING) AS region_name,
-        CAST(NULL AS STRING) AS city_name
+        'Undefined' AS country_code,
+        'Undefined' AS country_name,
+        'Undefined' AS region_name,
+        'Undefined' AS city_name
 ),
 
-combined AS (
-    SELECT * FROM unknown_member
+dim_location_combined AS (
+    SELECT *
+    FROM dim_locaton_unknown_member
+
     UNION ALL
-    SELECT * FROM location_dimension
+
+    SELECT *
+    FROM dim_location_distinct
 )
 
 SELECT
@@ -45,4 +44,4 @@ SELECT
     'dbt' AS inserted_by,
     CURRENT_TIMESTAMP() AS updated_date,
     'dbt' AS updated_by
-FROM combined
+FROM dim_location_combined

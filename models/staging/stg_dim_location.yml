@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: stg_dim_location
+    description: >
+      Staging model mapping raw IP addresses to a resolved location_key.
+      Each row represents one raw IP record. The location_key is computed
+      from country_code, region_name, and city_name, then deduplicated
+      downstream in dim_location.
+
+    columns:
+      - name: ip_address
+        description: "Raw IP address. Contains PII."
+        policy_tags:
+          - 'projects/project-cb877e31-7fb6-4cca-856/locations/asia-southeast1/taxonomies/1200166080218566966/policyTags/6523348285393393515'
+        tests:
+          - not_null
+          - unique
+
+      - name: location_key
+        description: >
+          Computed geography key. Multiple IP addresses can share the same
+          location_key because multiple IPs may belong to the same geography.
+          Deduplication happens downstream in dim_location.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_location')
+                field: location_key

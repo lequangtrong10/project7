@@ -43,7 +43,7 @@ mapped_currency AS (
     LEFT JOIN {{ ref('currency_url_mapping') }} AS currency_mapping
         ON expanded_cart.current_url = currency_mapping.current_url
 ),
-
+#loại bỏ "safe_cast", sử dụng "cast" và "null"
 parsed_price AS (
     SELECT
         mapped_currency.*,
@@ -126,14 +126,13 @@ resolved_currency AS (
 )
 
 SELECT
-    _id,
     order_id,
     user_id_db,
     email_address,
     order_timestamp,
     store_id,
     currency,
-    ip,
+    ip as ip_address,
     current_url,
     device_id,
     user_agent,
