@@ -31,14 +31,9 @@ clean-targets:         # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   project_07:
-    +schema: glamira
     staging:
       +materialized: view
     core:
       +materialized: table
-      +persist_docs:
-        columns: true
     mart:
       +materialized: table
-      +persist_docs:
-        columns: true

@@ -43,31 +43,42 @@ mapped_currency AS (
     LEFT JOIN {{ ref('currency_url_mapping') }} AS currency_mapping
         ON expanded_cart.current_url = currency_mapping.current_url
 ),
-#loại bỏ "safe_cast", sử dụng "cast" và "null"
 parsed_price AS (
     SELECT
         mapped_currency.*,
         CASE
             WHEN product_currency = '￥'
                  AND REGEXP_CONTAINS(TRIM(product_price), r'^\d{1,3}(,\d{3})+(\.00)?$')
-            THEN SAFE_CAST(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(product_price), ',', ''), r'\.00$', '') AS NUMERIC)
+            THEN CAST(
+                REGEXP_REPLACE(
+                    REGEXP_REPLACE(TRIM(product_price), ',', ''),
+                    r'\.00$',
+                    ''
+                ) AS NUMERIC
+            )
 
             WHEN REGEXP_CONTAINS(TRIM(product_price), r'٫\d{2}$')
-            THEN SAFE_CAST(REPLACE(TRIM(product_price), '٫', '.') AS NUMERIC)
+            THEN CAST(REPLACE(TRIM(product_price), '٫', '.') AS NUMERIC)
 
             WHEN REGEXP_CONTAINS(TRIM(product_price), r"^\d{1,3}('\d{3})+\.\d{2}$")
-            THEN SAFE_CAST(REGEXP_REPLACE(TRIM(product_price), r"'", '') AS NUMERIC)
+            THEN CAST(
+                REGEXP_REPLACE(TRIM(product_price), r"'", '') AS NUMERIC
+            )
 
             WHEN REGEXP_CONTAINS(TRIM(product_price), r',\d{2}$')
-            THEN SAFE_CAST(REPLACE(REPLACE(TRIM(product_price), '.', ''), ',', '.') AS NUMERIC)
+            THEN CAST(
+                REPLACE(REPLACE(TRIM(product_price), '.', ''), ',', '.') AS NUMERIC
+            )
 
             WHEN REGEXP_CONTAINS(TRIM(product_price), r'\.\d{2}$')
-            THEN SAFE_CAST(REPLACE(TRIM(product_price), ',', '') AS NUMERIC)
+            THEN CAST(
+                REPLACE(TRIM(product_price), ',', '') AS NUMERIC
+            )
 
             WHEN product_price IS NULL OR TRIM(product_price) = ''
             THEN NULL
 
-            ELSE SAFE_CAST(TRIM(product_price) AS NUMERIC)
+            ELSE NULL
         END AS unit_price
     FROM mapped_currency
 ),

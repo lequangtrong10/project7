@@ -1,7 +1,6 @@
-version: 2
-
 sources:
   - name: raw
+    database: project-cb877e31-7fb6-4cca-856
     schema: raw
     tables:
       - name: glamira_raw
